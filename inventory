@@ -1,0 +1,7 @@
+[all]
+localhost ansible_connection=local
+
+[bootstrap]
+192.168.4.236
+
+

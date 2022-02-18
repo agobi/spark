@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  become: yes
+  roles:
+    - { role: base, tags: ['base'] }
+    - { role: cron, tags: ['cron'] }
+    - { role: microcode, tags: ['microcode'], when: "'GenuineIntel' in ansible_processor" }
+    - { role: hardened, tags: ['hardened'] }
+#    - { role: ssh, tags: ['ssh'] }
+#    - { role: ntp, tags: ['ntp'] }
+#    - { role: laptop, tags: ['laptop'] }
+#    - { role: thinkpad, tags: ['thinkpad'], when: "'ThinkPad' in ansible_product_version" }
+#    - { role: macbook, tags: ['macbook'], when: "'MacBook' in ansible_product_name" }
+  vars_prompt:
+    - name: user_password
+      prompt: "Enter desired user password"

@@ -1,0 +1,133 @@
+---
+- name: Install chroot
+  hosts: bootstrap
+  remote_user: root
+  vars:
+    raw_disk: /dev/nvme0n1p3
+    efi_disk: /dev/nvme0n1p2
+  tasks:
+  - name: Enable NTP
+    command: timedatectl set-ntp true
+
+  - name: Open CryptRoot
+    command: 
+      cmd: cryptsetup open --perkf-no_read_workqueue --perf-no_write_workqueue --persistent {{ raw_disk }} cryptroot
+      creates: /dev/mapper/cryptroot
+
+  - name: Calculate SWAP
+    debug:
+      msg: "{{ ((ansible_memtotal_mb / 1024) + ((ansible_memtotal_mb / 1024) | root) + 0.5) | round | int }}"
+    register: swap_size
+
+  - name: Create a volume group
+    community.general.lvg:
+      vg: cryptvg
+      pvs: /dev/mapper/cryptroot
+
+  - name: Create swap volume
+    community.general.lvol:
+      vg: cryptvg
+      lv: swap
+      size: "{{ swap_size.msg }}G"
+    register: vol_swap
+
+  - name: Create root volume
+    community.general.lvol:
+      vg: cryptvg
+      lv: root
+      size: 50G
+    register: vol_root
+
+  - name: Create home volume
+    community.general.lvol:
+      vg: cryptvg
+      lv: home
+      size: 100%FREE
+      shrink: false
+    register: vol_home
+
+  - name: Format EFI
+    command: "mkfs.fat -F32 {{ efi_disk }}"
+    when: vol_root.changed
+
+  - name: Format root
+    command: mkfs.ext4 /dev/cryptvg/root
+    when: vol_root.changed
+
+  - name: Format home
+    command: mkfs.ext4 /dev/cryptvg/home
+    when: vol_home.changed
+
+  - name: Format home
+    command: mkswap /dev/cryptvg/swap
+    when: vol_swap.changed
+    register: fmt_swap
+
+  - name: Mount root
+    ansible.posix.mount: 
+      state: remounted
+      src: /dev/cryptvg/root 
+      path: /mnt
+
+  - name: Create directories
+    file:
+      path: "{{ item }}"
+      state: directory
+    loop:
+      - /mnt/efi
+      - /mnt/home
+
+  - name: Mount efi
+    ansible.posix.mount: 
+      state: remounted
+      src: "{{ efi_disk }}"
+      path: /mnt/efi
+
+  - name: Mount home
+    mount: 
+      state: remounted
+      src: /dev/cryptvg/home 
+      path: /mnt/home
+
+  - name: Enable Swap
+    command: swapon /dev/cryptvg/swap
+    when: ansible_swaptotal_mb < 1
+
+  - name: Bootstrap remote
+    command: 
+      cmd: pacstrap /mnt base linux linux-firmware dracut sbsigntools intel-ucode lvm2 openssh ansible git iwd efibootmgr 
+      creates: /mnt/usr/bin/bash
+
+  - name: Generate fstab
+    command: 
+      cmd: genfstab -U /mnt >> /mnt/etc/fstab
+      creates: /mnt/etc/fstab
+
+  - name: Create a tarball
+    connection: local
+    tags: remote
+    archive:
+      path: .
+      dest: spark.tgz
+
+  - name: Create remote bootstrap directory
+    tags: remote
+    file:
+      path: /mnt/bootstrap
+      state: directory
+
+  - name: Uncompress tarball
+    tags: remote
+    unarchive:
+      src: spark.tgz
+      dest: /mnt/bootstrap
+
+  - name: display post install message
+    connection: local
+    tags: remote
+    debug:
+      msg:
+        - 'Now, open your laptop and issue the following commands:'
+        - '- arch-chroot /mnt'
+        - '- cd bootstrap'
+        - '- ansible-playbook bootstrap-2.yml'
