@@ -19,6 +19,13 @@
   tags:
     - user
 
+- name: Install ssh keys
+  authorized_key:
+    user: "{{ user.name }}"
+    state: present
+    key: "{{ user.authorized_key }}"
+  when: user.authorized_key is defined
+  
 - name: Create user log dir
   file:
     path: /home/{{ user.name }}/{{ user.log.dir }}

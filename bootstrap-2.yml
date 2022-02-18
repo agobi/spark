@@ -4,6 +4,8 @@
   roles:
     - { role: base, tags: ['base'] }
     - { role: cron, tags: ['cron'] }
+    - { role: grub, tags: ['boot'], when: bootloader == "grub" }
+    - { role: systemd-boot, tags: ['boot'], when: bootloader == "systemd" }
     - { role: microcode, tags: ['microcode'], when: "'GenuineIntel' in ansible_processor" }
     - { role: hardened, tags: ['hardened'] }
 #    - { role: ssh, tags: ['ssh'] }

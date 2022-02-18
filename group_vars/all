@@ -1,14 +1,18 @@
+hostname: mikrobi
+bootloader: systemd-boot
+timezone: Europe/Budapest
+locale: en_US.UTF-8
+
 user:
-    name: pigmonkey
+    name: gobi
     uid: 1000
-    group: pigmonkey
-    shell: /usr/bin/zsh
-    email: peter@havenaut.net
+    group: gobi
+    shell: /bin/bash
+    email: attila.gobi@gmail.com
     log:
         dir: log
         rotate: 8
 
-hostname: mikrobi
 
 interception:
     caps2esc:
@@ -127,7 +131,6 @@ bitlbee:
     run_on: trusted
     torify: True
 
-bootloader: grub
 
 postgresql:
     enable: True

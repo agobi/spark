@@ -11,6 +11,10 @@
     - user
 
 - name: Copy sudo configuration
-  template: src=sudoers.j2 dest=/etc/sudoers mode=440 validate='visudo -cf %s'
+  copy: 
+    dest: /etc/sudoers.d/wheel.conf 
+    mode: 440 
+    content: |
+      %wheel ALL=(ALL) ALL
   tags:
     - sudo

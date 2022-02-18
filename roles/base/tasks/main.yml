@@ -1,17 +1,34 @@
 ---
+- name: Configure time zone
+  file:
+    src: /usr/share/zoneinfo/{{ timezone }}
+    dest: /etc/localtime
+    state: linke
+
 - name: Copy pacman configuration file
   copy:
     src: pacman.conf
     dest: /etc/pacman.conf
+    backup: true
+
+- name: Set up hwclock
+  command:
+    cmd: hwclock --systohc
+    creates: /etc/adjtime
+
+- name: Set up /etc/locale.gen
+  lineinfile:
+    regex: "{{ locale }}"
+    line: "{{ locale }}"
+  register: locale
+
+- name: Generate locales
+  command: locale-gen
+  when: locale.changed
 
 - name: Refresh pacman mirrors
   pacman:
     update_cache: yes
-
-- name: Install inetutils for hostname
-  pacman:
-      name: inetutils
-      state: present
 
 - name: Set the hostname
   hostname:
