@@ -9,10 +9,10 @@
   - name: Enable NTP
     command: timedatectl set-ntp true
 
-  - name: Open CryptRoot
-    command: 
-      cmd: cryptsetup open --perkf-no_read_workqueue --perf-no_write_workqueue --persistent {{ raw_disk }} cryptroot
-      creates: /dev/mapper/cryptroot
+#  - name: Open CryptRoot
+#    command: 
+#      cmd: cryptsetup open --perkf-no_read_workqueue --perf-no_write_workqueue --persistent {{ raw_disk }} cryptroot
+#      creates: /dev/mapper/cryptroot
 
   - name: Calculate SWAP
     debug:
@@ -65,9 +65,10 @@
 
   - name: Mount root
     ansible.posix.mount: 
-      state: remounted
+      state: mounted
       src: /dev/cryptvg/root 
       path: /mnt
+      fstype: ext4
 
   - name: Create directories
     file:
@@ -79,15 +80,17 @@
 
   - name: Mount efi
     ansible.posix.mount: 
-      state: remounted
+      state: mounted
       src: "{{ efi_disk }}"
       path: /mnt/efi
+      fstype: vfat
 
   - name: Mount home
     mount: 
-      state: remounted
+      state: mounted
       src: /dev/cryptvg/home 
       path: /mnt/home
+      fstype: ext4
 
   - name: Enable Swap
     command: swapon /dev/cryptvg/swap

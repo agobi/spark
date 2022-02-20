@@ -1,0 +1,6 @@
+---
+- name: Install grub
+  pacman:
+    name: grub
+    state: present
+  notify: rebuild boot

@@ -1,0 +1,21 @@
+---
+- name: Get kernels
+  command: ls /lib/modules
+  register: kernels
+  listen: rebuild boot
+
+- name: Create images
+  command: dracut --uefi --force --kver {{ item }}
+  loop: "{{ kernels.stdout_lines }}"
+  listen: rebuild boot
+
+- name: Get images
+  command: ls /efi/EFI/Linux
+  register: images
+  listen: rebuild boot
+  
+- name: Sign images
+  command: sbctl sign -s /efi/EFI/Linux/{{ item }}
+  loop: "{{ images.stdout_lines }}"
+  listen: rebuild boot
+  

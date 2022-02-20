@@ -1,0 +1,7 @@
+---
+dependencies:
+  - role: grub
+    when: bootloader == "grub"
+
+  - role: systemd-boot
+    when: bootloader == "systemd-boot"

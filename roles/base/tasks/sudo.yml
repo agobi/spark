@@ -12,9 +12,9 @@
 
 - name: Copy sudo configuration
   copy: 
-    dest: /etc/sudoers.d/wheel.conf 
+    dest: /etc/sudoers.d/wheel
     mode: 440 
     content: |
-      %wheel ALL=(ALL) ALL
+      %wheel ALL=(ALL:ALL) ALL
   tags:
     - sudo

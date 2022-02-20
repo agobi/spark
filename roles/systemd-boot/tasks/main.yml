@@ -1,0 +1,97 @@
+---
+- name: Install systemd-boot
+  command: 
+    cmd: bootctl install
+    creates: /efi/EFI/BOOT/BOOTX64.EFI
+  
+- name: Install AUR base packages
+  aur:
+    user: "{{ user.name }}"
+    name: "{{ item }}"
+  loop:
+    - dracut-hook-uefi
+    - systemd-boot-pacman-hook
+
+- name: Configure systemd-boot
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/pacman.d/hooks/{{ item }}"
+  loop:
+    - 998-systemd-boot.hook
+    - 99-secureboot.hook
+
+- name: Create loader directory
+  file:
+    state: directory
+    dest: "/efi/loader"
+
+- name: Create loader conf
+  copy:
+    src: loader.conf
+    dest: "/efi/loader/loader.conf"
+
+- name: Get root UUID
+  command: blkid /dev/nvme0n1p3 -s UUID -o value 
+  register: blkid
+
+- name: Configure dracut cmdline
+  template:
+    src: cmdline.conf
+    dest: /etc/dracut.conf.d/cmdline.conf
+  notify: rebuild boot
+
+- name: Configure dracut flags
+  copy:
+    src: flags.conf
+    dest: /etc/dracut.conf.d/flags.conf
+  notify: rebuild boot
+
+- name: Install shims
+  aur: 
+    name: shim-signed
+    user: "{{ user.name }}"
+
+- name: Copy BOOT
+  command:
+    cmd: mv /efi/EFI/BOOT/BOOTx64.EFI /efi/EFI/BOOT/grubx64.efi
+    creates: /efi/EFI/BOOT/grubx64.efi
+
+- name: Copy BOOT shimx64
+  copy:
+    remote_src: true
+    src: /usr/share/shim-signed/shimx64.efi
+    dest: /efi/EFI/BOOT/BOOTx64.EFI
+
+- name: Copy BOOT mmx64
+  copy:
+    remote_src: true
+    src: /usr/share/shim-signed/mmx64.efi
+    dest: /efi/EFI/BOOT/mmx64.efi
+
+- name: Install sbctl
+  pacman: name=sbctl state=present
+
+- name: Set up sbctl
+  command:
+    creates: /usr/share/secureboot/keys/db/db.pem
+    cmd: sbctl create-keys
+
+- name: Sign boot files
+  command: 
+    cmd: "sbctl sign -s /efi/EFI/{{ item }}"
+  loop:
+    - BOOT/grubx64.efi
+    - systemd/systemd-bootx64.efi
+
+- name: Install signature
+  command:
+    cmd: openssl x509 -outform DER -in /usr/share/secureboot/keys/db/db.pem -out /efi/signing.cer
+    creates: /efi/signing.cer
+
+- name: Install secureboot to dracut
+  copy:
+    dest: /etc/dracut.conf.d/secureboot.conf
+    content: |
+      uefi_secureboot_cert="/usr/share/secureboot/keys/db/db.pem"
+      uefi_secureboot_key="/usr/share/secureboot/keys/db/db.key"
+  notify: rebuild boot

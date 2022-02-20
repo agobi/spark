@@ -1,14 +1,26 @@
 ---
 - hosts: localhost
-  become: yes
+  post_tasks:
+    - name: Enable systemd-networkd
+      service: 
+        name: systemd-networkd.service
+        enabled: true
+    - name: Enable systemd-resolved
+      service: 
+        name: systemd-resolved.service
+        enabled: true
+    - name: Enable iwd
+      service: 
+        name: iwd.service
+        enabled: true
+
   roles:
     - { role: base, tags: ['base'] }
     - { role: cron, tags: ['cron'] }
-    - { role: grub, tags: ['boot'], when: bootloader == "grub" }
-    - { role: systemd-boot, tags: ['boot'], when: bootloader == "systemd" }
+    - { role: boot, tags: ['boot'] }
     - { role: microcode, tags: ['microcode'], when: "'GenuineIntel' in ansible_processor" }
     - { role: hardened, tags: ['hardened'] }
-#    - { role: ssh, tags: ['ssh'] }
+    - { role: ssh, tags: ['ssh'] }
 #    - { role: ntp, tags: ['ntp'] }
 #    - { role: laptop, tags: ['laptop'] }
 #    - { role: thinkpad, tags: ['thinkpad'], when: "'ThinkPad' in ansible_product_version" }
